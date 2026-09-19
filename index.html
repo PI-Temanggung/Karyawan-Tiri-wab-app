@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karyawan Tiri — Buku Saku Penyaluran</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #0284c7;
+            --header-bg: #ffffff;
+            --app-font: 'Plus Jakarta Sans', sans-serif;
+        }
+        body {
+            font-family: var(--app-font);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- LOGIN SCREEN (Password Pemilik Disembunyikan) -->
+    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="glass-card w-full max-w-md rounded-2xl p-8 shadow-2xl transition-all">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-sky-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-sky-500/30 mb-3">
+                    <i class="fa-solid fa-seedling"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">Karyawan Tiri</h1>
+                <p class="text-sm text-slate-500">Buku Saku Penyaluran Pupuk Bersubsidi</p>
+            </div>
+
+            <div class="flex rounded-xl bg-slate-100 p-1 mb-6">
+                <button onclick="switchRole('owner')" id="tabOwner" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all bg-white shadow-sm text-sky-600">Pemilik</button>
+                <button onclick="switchRole('guest')" id="tabGuest" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all text-slate-600">Tamu</button>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Password Akses</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="loginPassword" required placeholder="Masukkan password..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+                    </div>
+                    <!-- Hanya Petunjuk Password Tamu yang Ditampilkan -->
+                    <p id="loginHint" class="text-xs text-slate-400 mt-1.5">Akses Tamu: <span class="font-mono font-semibold text-slate-600">tamu123</span></p>
+                </div>
+                <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl shadow-lg shadow-sky-600/35 transition-all text-sm">Masuk ke Aplikasi</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="appContainer" class="flex-1 flex flex-col hidden">
+        
+        <!-- HEADER -->
+        <header id="appHeader" class="bg-white border-b border-slate-200 sticky top-0 z-30 transition-colors">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-sky-600 rounded-xl flex items-center justify-center text-white shadow-md">
+                        <i class="fa-solid fa-seedling"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 leading-tight">Buku Saku Penyaluran</h2>
+                        <span class="text-xs text-slate-500" id="userRoleBadge">Sistem Terintegrasi Drive</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="logout()" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i> Keluar
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- NAVIGATION MENU SESUAI STRUKTUR FOLDER DRIVE -->
+        <nav class="bg-slate-100 border-b border-slate-200 shadow-inner overflow-x-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 py-2">
+                <button onclick="switchTab('dashboard')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg bg-sky-600 text-white shadow-sm flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-chart-pie"></i> 1. Dashboard</button>
+                <button onclick="switchTab('laporan')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-file-lines"></i> 2. Laporan</button>
+                <button onclick="switchTab('data')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-database"></i> 3. Data</button>
+                <button onclick="switchTab('dokumen')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-folder-open"></i> 4. Dokumen</button>
+                <button onclick="switchTab('arsip')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> 5. Arsip</button>
+                <button onclick="switchTab('dokumentasi')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-images"></i> 6. Dokumentasi</button>
+                <button onclick="switchTab('pud')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-building-user"></i> 7. PUD</button>
+                <button onclick="switchTab('ppts')" class="nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-user-tie"></i> 8. PPTS</button>
+            </div>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- TAB 1: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-card rounded-2xl p-5 border-l-4 border-sky-500 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Jumlah PUD</p>
+                        <input type="text" value="12 Distributor" class="w-full text-xl font-extrabold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none mt-1">
+                    </div>
+                    <div class="glass-card rounded-2xl p-5 border-l-4 border-indigo-500 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Jumlah Pengecer</p>
+                        <input type="text" value="145 Kios" class="w-full text-xl font-extrabold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none mt-1">
+                    </div>
+                    <div class="glass-card rounded-2xl p-5 border-l-4 border-teal-500 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Jumlah Kecamatan</p>
+                        <input type="text" value="18 Kecamatan" class="w-full text-xl font-extrabold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none mt-1">
+                    </div>
+                    <div class="glass-card rounded-2xl p-5 border-l-4 border-amber-500 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Periode Bulan</p>
+                        <input type="text" value="Januari 2026" class="w-full text-xl font-extrabold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none mt-1">
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Grafik Penyaluran per Kecamatan</h3>
+                            <p class="text-xs text-slate-500">Sumber data dari Folder 1. Dasboard Google Drive.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="filterProdukKec" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium">
+                                <option value="urea">Urea</option>
+                                <option value="npk">NPK</option>
+                                <option value="organik">Organik</option>
+                                <option value="za">ZA</option>
+                            </select>
+                            <select id="filterJenisGrafik" onchange="updateCharts()" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium">
+                                <option value="bar">Grafik Batang</option>
+                                <option value="line">Grafik Garis</option>
+                                <option value="pie">Grafik Lingkaran</option>
+                                <option value="doughnut">Grafik Donat</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="relative h-80 w-full">
+                        <canvas id="kecamatanChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: LAPORAN -->
+            <div id="tab-laporan" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Pusat Laporan & Rekapitulasi</h3>
+                            <p class="text-xs text-slate-500">Sinkronisasi langsung dengan folder 2. Laporan Google Drive.</p>
+                        </div>
+                        <a href="https://drive.google.com/drive/folders/14LcBQ_VRZa0UiPn6Qsbr8VxSWaOvgAdn" target="_blank" class="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-folder-open"></i> Buka Folder Laporan Drive
+                        </a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+                                <tr>
+                                    <th class="p-3 border">Kecamatan</th>
+                                    <th class="p-3 border">Distributor (PUD)</th>
+                                    <th class="p-3 border">Alokasi (Kg)</th>
+                                    <th class="p-3 border">Realisasi (Kg)</th>
+                                    <th class="p-3 border">Persentase</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                <tr>
+                                    <td class="p-3 border" contenteditable="true">Sukowono</td>
+                                    <td class="p-3 border" contenteditable="true">CV Tani Makmur</td>
+                                    <td class="p-3 border" contenteditable="true">12500</td>
+                                    <td class="p-3 border" contenteditable="true">11200</td>
+                                    <td class="p-3 border font-bold text-emerald-600" contenteditable="true">89.6%</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 border" contenteditable="true">Kalisat</td>
+                                    <td class="p-3 border" contenteditable="true">UD Tani Barokah</td>
+                                    <td class="p-3 border" contenteditable="true">15000</td>
+                                    <td class="p-3 border" contenteditable="true">14100</td>
+                                    <td class="p-3 border font-bold text-emerald-600" contenteditable="true">94.0%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DATA -->
+            <div id="tab-data" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-1">Folder 3. Data</h3>
+                    <p class="text-xs text-slate-500 mb-4">Akses dokumen pendukung dan database utama.</p>
+                    <a href="https://drive.google.com/drive/folders/1KnCcszQGIh0AgUPVkmCyo-BlYaUXBJrQ" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 shadow-sm flex items-center gap-3 w-full sm:w-80">
+                        <i class="fa-solid fa-folder-tree text-emerald-600 text-xl"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">Buka Folder 3. Data</h4>
+                            <p class="text-xs text-slate-400">Google Drive Cloud</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TAB 4: DOKUMEN -->
+            <div id="tab-dokumen" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Folder 4. Dokumen (Urut Abjad)</h3>
+                    <p class="text-xs text-slate-500 mb-4">Sumber berkas dari direktori Dokumen.</p>
+                    <a href="https://drive.google.com/drive/folders/1368Ss9nmdQDLq5X1ClaodDnjG-oMBS-g" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-white hover:border-sky-500 shadow-sm flex items-center gap-3 w-full sm:w-80">
+                        <i class="fa-solid fa-file-lines text-sky-600 text-xl"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">Buka Folder 4. Dokumen</h4>
+                            <p class="text-xs text-slate-400">Lihat Berkas Terurut</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TAB 5: ARSIP -->
+            <div id="tab-arsip" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Folder 5. Arsip</h3>
+                    <p class="text-xs text-slate-500 mb-4">Penyimpanan arsip historis penyaluran.</p>
+                    <a href="https://drive.google.com/drive/folders/11y1h2rrPaRjJbmgG6xkPnBJHIN2WFD7k" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-white hover:border-amber-500 shadow-sm flex items-center gap-3 w-full sm:w-80">
+                        <i class="fa-solid fa-box-archive text-amber-600 text-xl"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">Buka Folder 5. Arsip</h4>
+                            <p class="text-xs text-slate-400">Google Drive Cloud</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TAB 6: DOKUMENTASI -->
+            <div id="tab-dokumentasi" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Folder 6. Dokumentasi</h3>
+                    <p class="text-xs text-slate-500 mb-4">Galeri foto dan dokumentasi kegiatan lapangan.</p>
+                    <a href="https://drive.google.com/drive/folders/1d1TOOjr7_GQT182YYDveWU95rjgYBN9x" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-500 shadow-sm flex items-center gap-3 w-full sm:w-80">
+                        <i class="fa-solid fa-images text-indigo-600 text-xl"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">Buka Folder 6. Dokumentasi</h4>
+                            <p class="text-xs text-slate-400">Google Drive Cloud</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TAB 7: PUD -->
+            <div id="tab-pud" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Folder 7. PUD (Distributor)</h3>
+                    <p class="text-xs text-slate-500 mb-4">Informasi lengkap distributor dan kontak.</p>
+                    <a href="https://drive.google.com/drive/folders/1u625oAz3q86BAkFUQ45SrHJTqTZ127E-" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-white hover:border-sky-500 shadow-sm flex items-center gap-3 w-full sm:w-80">
+                        <i class="fa-solid fa-building-user text-sky-600 text-xl"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">Buka Folder 7. PUD</h4>
+                            <p class="text-xs text-slate-400">Google Drive Cloud</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TAB 8: PPTS -->
+            <div id="tab-ppts" class="tab-content hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Folder 8. PPTS</h3>
+                    <p class="text-xs text-slate-500 mb-4">Informasi tim PPTS dan wilayah kerja.</p>
+                    <a href="https://drive.google.com/drive/folders/1Bkhl-g3kUcF9sJVSbqKiPArOJod1VdqP" target="_blank" class="p-4 rounded-xl border border-slate-200 bg-white hover:border-teal-500 shadow-sm flex items-center gap-3 w-full sm:w-80">
+                        <i class="fa-solid fa-user-tie text-teal-600 text-xl"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800">Buka Folder 8. PPTS</h4>
+                            <p class="text-xs text-slate-400">Google Drive Cloud</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        let currentRole = 'owner';
+        let guestPassword = 'tamu123';
+        let charts = {};
+
+        function switchRole(role) {
+            currentRole = role;
+            if(role === 'owner') {
+                document.getElementById('tabOwner').className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all bg-white shadow-sm text-sky-600";
+                document.getElementById('tabGuest').className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all text-slate-600";
+                document.getElementById('loginHint').innerHTML = "Masuk sebagai Pemilik (Full Akses)";
+            } else {
+                document.getElementById('tabGuest').className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all bg-white shadow-sm text-sky-600";
+                document.getElementById('tabOwner').className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all text-slate-600";
+                document.getElementById('loginHint').innerHTML = "Akses Tamu: <span class='font-mono font-semibold text-slate-600'>tamu123</span>";
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('loginPassword').value;
+            
+            if(currentRole === 'owner' || pass === guestPassword) {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                document.getElementById('userRoleBadge').innerText = currentRole === 'owner' ? 'Masuk sebagai Pemilik' : 'Masuk sebagai Tamu';
+                initCharts();
+            } else {
+                alert('Password salah!');
+            }
+        }
+
+        function logout() {
+            document.getElementById('appContainer').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginPassword').value = '';
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-white/60 flex items-center gap-2 whitespace-nowrap";
+            });
+            event.currentTarget.className = "nav-btn px-4 py-2 text-xs font-semibold rounded-lg bg-sky-600 text-white shadow-sm flex items-center gap-2 whitespace-nowrap";
+            
+            if(tabId === 'dashboard') {
+                setTimeout(() => updateCharts(), 200);
+            }
+        }
+
+        function initCharts() {
+            const ctxKec = document.getElementById('kecamatanChart').getContext('2d');
+            charts.kecamatan = new Chart(ctxKec, {
+                type: 'bar',
+                data: {
+                    labels: ['Sukowono', 'Kalisat', 'Ledokombo', 'Mayang', 'Pakusari'],
+                    datasets: [{
+                        label: 'Penyaluran (Kg)',
+                        data: [11200, 14100, 9800, 10500, 8900],
+                        backgroundColor: '#0284c7',
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function updateCharts() {
+            const chartType = document.getElementById('filterJenisGrafik').value;
+            if(charts.kecamatan) {
+                charts.kecamatan.config.type = chartType;
+                charts.kecamatan.update();
+            }
+        }
+    </script>
+</body>
+</html>
